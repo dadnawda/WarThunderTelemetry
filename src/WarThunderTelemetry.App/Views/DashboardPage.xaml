@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="WarThunderTelemetry.App.Views.DashboardPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer Padding="16">
+        <StackPanel Spacing="16">
+
+            <!-- 告警条 -->
+            <InfoBar x:Name="AlertBar"
+                     IsOpen="False"
+                     IsClosable="False"
+                     Severity="Informational"
+                     Title="告警" />
+
+            <!-- 核心飞行数据卡片 -->
+            <TextBlock Text="核心飞行数据" FontSize="15" FontWeight="SemiBold"
+                       Foreground="{ThemeResource WtPrimaryTextBrush}" />
+            <ItemsControl x:Name="CardList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+
+            <!-- 派生指标卡片 -->
+            <TextBlock Text="性能派生指标（本地计算）" FontSize="15" FontWeight="SemiBold"
+                       Margin="0,8,0,0"
+                       Foreground="{ThemeResource WtPrimaryTextBrush}" />
+            <ItemsControl x:Name="DerivedCardList">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <ItemsWrapGrid Orientation="Horizontal" MaximumRowsOrColumns="4" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+            </ItemsControl>
+
+            <!-- 当前生效阈值 -->
+            <TextBlock Text="当前生效告警阈值" FontSize="15" FontWeight="SemiBold"
+                       Margin="0,8,0,0"
+                       Foreground="{ThemeResource WtPrimaryTextBrush}" />
+            <Border Background="{ThemeResource WtCardBackgroundBrush}"
+                    BorderBrush="{ThemeResource WtCardBorderBrush}"
+                    BorderThickness="1" CornerRadius="8" Padding="14">
+                <TextBlock x:Name="ThresholdText" Text="等待数据…" FontSize="13"
+                           Foreground="{ThemeResource WtSecondaryTextBrush}"
+                           TextWrapping="Wrap" LineHeight="22" />
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

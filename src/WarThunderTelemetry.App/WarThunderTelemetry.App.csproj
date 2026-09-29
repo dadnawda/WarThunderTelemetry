@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <RootNamespace>WarThunderTelemetry.App</RootNamespace>
+    <AssemblyName>WarThunderTelemetry</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x64</Platforms>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <UseWinUI>true</UseWinUI>
+
+    <!-- 非打包模式：无需 Package.appxmanifest，直接 F5 即可运行。
+         悬浮窗的鼠标穿透与全局热键在非打包下不受 AppContainer 限制。 -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableMsixTooling>false</EnableMsixTooling>
+
+    <!-- 自包含发布：把 Windows App SDK 运行时随程序一起输出。
+         这样就不再依赖目标机预装 WindowsAppRuntime 的
+         Framework / Main / Singleton 三个包 —— 那三个包缺一个，
+         非打包应用就会在托管代码执行前直接被引导程序掐掉
+         （表现为弹「requires Windows App Runtime」对话框，退出码 0x80670016）。 -->
+    <SelfContained>true</SelfContained>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <PublishReadyToRun>false</PublishReadyToRun>
+
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- LibraryImport 源生成器（P/Invoke）会产出 unsafe 代码，必须开启。 -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WarThunderTelemetry.Core\WarThunderTelemetry.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <RootNamespace>WarThunderTelemetry.Core</RootNamespace>
+    <AssemblyName>WarThunderTelemetry.Core</AssemblyName>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- Core 层不依赖任何 UI 框架 -->
+    <UseWinUI>false</UseWinUI>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 内置载具参数库作为嵌入资源，运行时无需外部文件 -->
+    <EmbeddedResource Include="Vehicles\VehicleData.json" />
+    <!-- wiki 的载具 slug 索引：把游戏代号映射到页面地址，离线完成 -->
+    <EmbeddedResource Include="Vehicles\VehicleSlugs.json" />
+  </ItemGroup>
+
+</Project>

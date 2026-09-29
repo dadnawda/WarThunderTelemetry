@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <RootNamespace>WarThunderTelemetry.Tests</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <UseWinUI>false</UseWinUI>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.0" />
+    <PackageReference Include="Xunit.SkippableFact" Version="1.5.23" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WarThunderTelemetry.Core\WarThunderTelemetry.Core.csproj" />
+  </ItemGroup>
+
+  <!-- wiki 页面的真实存档，供解析器回归测试使用。
+       这几份 HTML 是从线上抓下来的真实页面，不随代码改动 —— 一旦解析器
+       改坏，测试立刻失败，避免「改完看着没问题、上线才发现抓不到数据」。 -->
+  <ItemGroup>
+    <None Include="Fixtures\**\*.html" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

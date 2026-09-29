@@ -1,0 +1,40 @@
+{
+  "_comment": "载具参数库。数据取自官方 wiki (wiki.warthunder.com) 性能参数区，统一取 RB(历史) 档。凡未能核实的项一律留空(null)，告警时自动退回兵种缺省值 —— 不编造数值。",
+  "_schema": {
+    "type": "接口 indicators.type 返回的载具代号",
+    "displayName": "显示名",
+    "army": "air | tank",
+    "role": "fighter | attacker | bomber | helicopter | tank",
+    "nation": "所属国家",
+    "maxSpeedIas": "Max Speed Limit (IAS)，km/h",
+    "machLimit": "Mach Number Limit",
+    "gLimitPositive": "G limit 正向值，单位 g",
+    "gLimitNegative": "G limit 负向值绝对值，单位 g",
+    "stallSpeedIas": "失速速度 km/h（官方参数区未直接给出，多为估算或留空）",
+    "gearSpeedLimit": "Gear Speed Limit (IAS)，km/h",
+    "flapSpeedLimit": "Flap Speed Limit (IAS) 战斗档，km/h",
+    "rateOfClimb": "Rate of Climb，m/s",
+    "turnTime": "Turn time，s",
+    "maxAltitude": "Max altitude，m",
+    "source": "数据来源标注"
+  },
+  "vehicles": {
+    "la_9": {
+      "displayName": "La-9",
+      "army": "air",
+      "role": "fighter",
+      "nation": "USSR",
+      "maxSpeedIas": 850,
+      "machLimit": 0.8,
+      "gLimitPositive": 13,
+      "gLimitNegative": 8,
+      "stallSpeedIas": null,
+      "gearSpeedLimit": 320,
+      "flapSpeedLimit": 490,
+      "rateOfClimb": 19.2,
+      "turnTime": 21.0,
+      "maxAltitude": 13000,
+      "source": "wiki-rb"
+    }
+  }
+}

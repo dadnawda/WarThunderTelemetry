@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <ResourceDictionary.ThemeDictionaries>
+        <!-- 只定义 Light 分支：应用始终使用浅色主题，不跟随系统 -->
+        <ResourceDictionary x:Key="Light">
+
+            <!-- 页面背景 -->
+            <SolidColorBrush x:Key="WtPageBackgroundBrush" Color="#F5F6F8" />
+            <SolidColorBrush x:Key="WtCardBackgroundBrush" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="WtCardBorderBrush" Color="#E3E6EB" />
+
+            <!-- 文本 -->
+            <SolidColorBrush x:Key="WtPrimaryTextBrush" Color="#1B1F24" />
+            <SolidColorBrush x:Key="WtSecondaryTextBrush" Color="#5B636E" />
+            <SolidColorBrush x:Key="WtMutedTextBrush" Color="#98A0AB" />
+
+            <!-- 数据强调色 -->
+            <SolidColorBrush x:Key="WtAccentBrush" Color="#0B6BCB" />
+            <SolidColorBrush x:Key="WtDataValueBrush" Color="#0B3D91" />
+
+            <!-- 告警级别配色（浅色底上保证对比度） -->
+            <SolidColorBrush x:Key="WtAlertInfoBrush" Color="#5B636E" />
+            <SolidColorBrush x:Key="WtAlertCautionBrush" Color="#9A6700" />
+            <SolidColorBrush x:Key="WtAlertWarningBrush" Color="#BC4C00" />
+            <SolidColorBrush x:Key="WtAlertCriticalBrush" Color="#CF222E" />
+
+            <!-- 状态指示 -->
+            <SolidColorBrush x:Key="WtConnectedBrush" Color="#1A7F37" />
+            <SolidColorBrush x:Key="WtDisconnectedBrush" Color="#98A0AB" />
+
+        </ResourceDictionary>
+
+        <!-- 同时提供 Dark 分支以防系统强制切换时找不到资源 -->
+        <ResourceDictionary x:Key="Dark">
+            <SolidColorBrush x:Key="WtPageBackgroundBrush" Color="#1B1F24" />
+            <SolidColorBrush x:Key="WtCardBackgroundBrush" Color="#22272E" />
+            <SolidColorBrush x:Key="WtCardBorderBrush" Color="#333A43" />
+            <SolidColorBrush x:Key="WtPrimaryTextBrush" Color="#E6EDF3" />
+            <SolidColorBrush x:Key="WtSecondaryTextBrush" Color="#A8B2BD" />
+            <SolidColorBrush x:Key="WtMutedTextBrush" Color="#6E7781" />
+            <SolidColorBrush x:Key="WtAccentBrush" Color="#58A6FF" />
+            <SolidColorBrush x:Key="WtDataValueBrush" Color="#A5D6FF" />
+            <SolidColorBrush x:Key="WtAlertInfoBrush" Color="#A8B2BD" />
+            <SolidColorBrush x:Key="WtAlertCautionBrush" Color="#D29922" />
+            <SolidColorBrush x:Key="WtAlertWarningBrush" Color="#DB6D28" />
+            <SolidColorBrush x:Key="WtAlertCriticalBrush" Color="#F85149" />
+            <SolidColorBrush x:Key="WtConnectedBrush" Color="#3FB950" />
+            <SolidColorBrush x:Key="WtDisconnectedBrush" Color="#6E7781" />
+        </ResourceDictionary>
+    </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

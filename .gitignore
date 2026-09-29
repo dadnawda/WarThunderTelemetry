@@ -1,0 +1,25 @@
+# ---- 构建产物 ----
+bin/
+obj/
+*.user
+*.suo
+
+# ---- 运行期日志与产物（不进版本库）----
+crash.log
+build-log.txt
+test-log.txt
+selfcheck-out.txt
+
+# ---- VS / Rider ----
+.vs/
+.idea/
+*.DotSettings.user
+
+# ---- 打包/发布输出 ----
+publish/
+*.zip
+
+# ---- 本地配置与备份 ----
+*.bak
+*.bak-*
+settings.json
