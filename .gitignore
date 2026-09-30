@@ -10,6 +10,7 @@ build-log.txt
 test-log.txt
 selfcheck-out.txt
 publish-log.txt
+installer-log.txt
 
 # ---- VS / Rider ----
 .vs/

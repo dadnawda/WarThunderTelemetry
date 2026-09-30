@@ -7,6 +7,9 @@
     <RootNamespace>WarThunderTelemetry.App</RootNamespace>
     <AssemblyName>WarThunderTelemetry</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- EXE 自身带图标：资源管理器、任务栏、快捷方式显示的都是它。
+         由 tools/make-icon.py 生成，改图标就重跑那个脚本。 -->
+    <ApplicationIcon>app.ico</ApplicationIcon>
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <UseWinUI>true</UseWinUI>
@@ -39,6 +42,16 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WarThunderTelemetry.Core\WarThunderTelemetry.Core.csproj" />
+  </ItemGroup>
+
+  <!-- 面向最终用户的使用说明，随发布自动带上。
+       源文件放在 installer\ 下纳入版本控制；Publish 会清空发布目录，
+       所以必须由 MSBuild 在发布时复制，而不能靠发布后手工补 ——
+       也不能在 .cmd 里复制（cmd 会搅碎中文文件名，本项目踩过）。 -->
+  <ItemGroup>
+    <None Include="..\..\installer\使用说明.txt"
+          Link="使用说明.txt"
+          CopyToPublishDirectory="Always" />
   </ItemGroup>
 
   <!-- ============================================================

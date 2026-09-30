@@ -3,6 +3,9 @@ REM ============================================================
 REM  Publish a self-contained Release build (x64).
 REM  Output: publish\WarThunderTelemetry\  (all deps included)
 REM  Log   : publish-log.txt
+REM
+REM  NOTE: keep this file pure ASCII - cmd mangles non-ASCII bytes.
+REM  The readme (Chinese filename) is copied by MSBuild, not here.
 REM ============================================================
 
 setlocal
@@ -32,4 +35,11 @@ if exist "%OUTROOT%" rmdir /s /q "%OUTROOT%"
   /restore /v:minimal >> "%LOG%" 2>&1
 
 echo EXITCODE=%ERRORLEVEL% >> "%LOG%"
-endlocal
+set "PUBLISH_EXIT=%ERRORLEVEL%"
+
+REM Strip debug symbols - not needed in a distribution package.
+if "%PUBLISH_EXIT%"=="0" (
+    del /q "%OUT%\*.pdb" >> "%LOG%" 2>&1
+)
+
+endlocal & exit /b %PUBLISH_EXIT%
