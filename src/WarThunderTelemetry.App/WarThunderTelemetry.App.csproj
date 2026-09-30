@@ -41,4 +41,28 @@
     <ProjectReference Include="..\WarThunderTelemetry.Core\WarThunderTelemetry.Core.csproj" />
   </ItemGroup>
 
+  <!-- ============================================================
+       WinUI 3 已知问题：/t:Publish 不会把编译后的 XAML 产物带进发布目录。
+
+       Publish 的目标是为 MSIX 打包设计的，它把 .pri 资源索引和各页面的
+       .xbf（编译后的二进制 XAML）当成"打包阶段再处理"的内容，于是发布
+       目录里只有 exe/dll，缺这两样。
+
+       后果：发布版一启动就在 MainWindow.InitializeComponent() 抛
+       XamlParseException: XAML parsing failed，而 Debug 能跑
+       （bin 目录里是有这些文件的），极难一眼看出原因。
+
+       这里在 Publish 之后手动补齐，保证发布目录可直接分发。
+       ============================================================ -->
+  <Target Name="CopyXamlArtifactsToPublish" AfterTargets="Publish">
+    <ItemGroup>
+      <_XamlArtifact Include="$(TargetDir)$(AssemblyName).pri" />
+      <_XamlArtifact Include="$(TargetDir)**\*.xbf" />
+    </ItemGroup>
+
+    <Copy SourceFiles="@(_XamlArtifact)"
+          DestinationFiles="@(_XamlArtifact->'$(PublishDir)%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
+
 </Project>

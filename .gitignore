@@ -9,6 +9,7 @@ crash.log
 build-log.txt
 test-log.txt
 selfcheck-out.txt
+publish-log.txt
 
 # ---- VS / Rider ----
 .vs/
