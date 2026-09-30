@@ -13,7 +13,7 @@
 
 #define AppName        "战雷遥测悬浮辅助"
 #define AppNameEn      "WarThunderTelemetry"
-#define AppVersion     "1.0.0"
+#define AppVersion     "1.1.0"
 #define AppPublisher   "dadnawda"
 #define AppURL         "https://github.com/dadnawda/WarThunderTelemetry"
 #define AppExeName     "WarThunderTelemetry.exe"

@@ -17,6 +17,8 @@
     <EmbeddedResource Include="Vehicles\VehicleData.json" />
     <!-- wiki 的载具 slug 索引：把游戏代号映射到页面地址，离线完成 -->
     <EmbeddedResource Include="Vehicles\VehicleSlugs.json" />
+    <!-- 空空导弹实测参数库（来自社区数据挖掘表，tools/extract-missiles.py 生成） -->
+    <EmbeddedResource Include="Weapons\missiles.json" />
   </ItemGroup>
 
 </Project>

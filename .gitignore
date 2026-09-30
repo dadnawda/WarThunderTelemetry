@@ -21,6 +21,9 @@ installer-log.txt
 publish/
 *.zip
 
+# ---- 提取过程的中间产物（原始数据是 Excel，不入库）----
+tools/missile-data.json
+
 # ---- 本地配置与备份 ----
 *.bak
 *.bak-*

@@ -160,6 +160,9 @@ public static class LaunchEnvelopeCalculator
     /// <summary>重力加速度。</summary>
     private const double G = 9.806_65;
 
+    /// <summary>飞行模型路径：低于该速度（m/s）的末端弹视为失去拦截能力。</summary>
+    private const double MinCruiseThreshold = 150.0;
+
     /// <summary>
     /// 求解一次发射。
     /// </summary>
@@ -172,6 +175,18 @@ public static class LaunchEnvelopeCalculator
         ArgumentNullException.ThrowIfNull(input);
 
         var estimates = false;
+
+        // ---------- 0. 数据挖掘参数可用时，直接走飞行模型推演 ----------
+        // 模拟结构与 statshark 类弹道计算器一致：逐帧积分速度/距离曲线，
+        // 再在曲线上解最大射程、不可逃逸区与命中时间。
+        var ownAltitude = input.OwnAltitudeM ?? 1_000;
+        var ownSpeedKmh = input.OwnSpeedKmh ?? 800;
+
+        if (MissileFlightModel.TryBuild(profile, ownAltitude, ownSpeedKmh, out var flight) &&
+            flight is not null)
+        {
+            return SolveWithFlightModel(profile, input, flight, ownAltitude, ownSpeedKmh);
+        }
 
         // ---------- 1. 补齐缺失参数（保守估算并标记） ----------
         var nominalMax = profile.MaxRange ?? EstimateMaxRange(profile, ref estimates);
@@ -264,6 +279,118 @@ public static class LaunchEnvelopeCalculator
             LoadWithinLimit = loadOk,
             HasEstimates = estimates,
             AltitudeAdvantage = input.TargetAltitudeM is { } ta ? ownAlt - ta : null,
+        };
+    }
+
+    // ================= 飞行模型推演路径 =================
+
+    /// <summary>
+    /// 用数据挖掘参数构建的飞行模型求解发射包线。
+    /// <para>
+    /// 与估算路径的区别：射程不再是「标称值 × 修正系数」，
+    /// 而是从模拟出的速度-距离曲线上解出来 —— 迎头/尾追的差别
+    /// 来自真实的能量消耗，命中时间来自积分曲线的求根。
+    /// </para>
+    /// </summary>
+    private static LaunchSolution SolveWithFlightModel(
+        MissileProfile profile,
+        LaunchInput input,
+        MissileFlightModel flight,
+        double ownAltitude,
+        double ownSpeedKmh)
+    {
+        var estimates = profile.MassKg is null || profile.DragCxk is null;
+
+        // 目标速度：迎头接近为负闭合，尾追逃逸为正闭合。
+        var targetSpeedKmh = input.TargetSpeedKmh ?? DefaultTargetSpeed(input.Aspect);
+        var targetSpeedMs = Math.Max(0, targetSpeedKmh / 3.6);
+
+        // 侧向目标对闭合率的消耗约为尾追的一半。
+        var recessionFactor = input.Aspect == EngagementAspect.SideOn ? 0.5 : 1.0;
+        var receding = targetSpeedMs * recessionFactor;
+        var closing = -receding;
+
+        var isHeadOn = input.Aspect == EngagementAspect.HeadOn;
+
+        // 末段速度阈值：低于极速 1/3 的弹没有机动余量，不算有效命中。
+        var minTerminal = Math.Max(150, flight.MaxSpeedMs / 3.0);
+        // 不可逃逸区要求目标做规避机动时导弹仍有足够能量修正 —— 阈值更高。
+        var noEscapeTerminal = Math.Max(200, flight.MaxSpeedMs / 2.0);
+
+        // ---- 射程族 ----
+        // 最大射程：迎头按接近闭合，尾追按逃逸闭合。
+        var maxRange = flight.MaxRangeFor(closing, MinCruiseThreshold);
+        if (!isHeadOn)
+        {
+            maxRange = Math.Max(flight.MaxRangeFor(receding, MinCruiseThreshold), maxRange * 0.6);
+        }
+
+        // 不可逃逸区：目标立刻掉头逃逸。
+        var noEscape = flight.MaxRangeFor(receding, noEscapeTerminal);
+
+        // 有效射程：按态势取闭合方向，末段速度阈值比不可逃逸区宽松 ——
+        // 结果自然落在「不可逃逸 ≤ 有效 ≤ 最大」之间。
+        var effectiveRange = flight.MaxRangeFor(
+            isHeadOn ? closing : receding, minTerminal);
+
+        // 最小射程：机动解锁延迟内的飞行距离，加 20% 保险。
+        // 近距离还要留出导引头解锁与引信保险的距离，下限 500 m。
+        var minRange = profile.ManeuverDelayS is { } delay && delay > 0
+            ? Math.Max(500, flight.DistanceAt(delay) * 1.2)
+            : ResolveMinRange(profile, profile.MaxG ?? 15.0);
+
+        // ---- 导引头 ----
+        var seekerNominal = profile.ResolveSeekerRange(AspectKey(input.Aspect), maxRange);
+        var seekerRange = seekerNominal;
+
+        // ---- 发射条件 ----
+        var loadLimit = profile.LaunchGLimit;
+        var loadOk = loadLimit is null || input.OwnLoadG is null ||
+                     input.OwnLoadG.Value <= loadLimit.Value + 0.001;
+
+        var speedOk = ownSpeedKmh >= 250;
+        var distance = input.TargetDistanceM;
+        var seekerLocked = distance is null || distance.Value <= seekerRange;
+
+        // ---- 命中时间与末速 ----
+        double? timeToImpact = null;
+        double? terminalSpeed = null;
+
+        if (distance is { } d && d > 0)
+        {
+            // 迎头目标接近，传负闭合；命中瞬间速度低于阈值视为不可拦截。
+            var closure = isHeadOn ? -targetSpeedMs : targetSpeedMs * recessionFactor;
+            timeToImpact = flight.TimeToImpact(d, closure, MinCruiseThreshold);
+            if (timeToImpact is { } t)
+            {
+                terminalSpeed = flight.InterceptSpeedMs(t);
+            }
+        }
+
+        var verdict = Decide(
+            distance, minRange, noEscape, effectiveRange,
+            loadOk, speedOk, seekerLocked, terminalSpeed);
+
+        var advice = BuildAdvice(
+            verdict, profile, distance, minRange, noEscape, effectiveRange,
+            loadOk, loadLimit, input.OwnLoadG, speedOk, seekerLocked, input.Aspect);
+
+        return new LaunchSolution
+        {
+            MissileName = profile.DisplayNameZh ?? profile.DisplayName,
+            Verdict = verdict,
+            Advice = advice,
+            MinRange = minRange,
+            NoEscapeRange = noEscape,
+            EffectiveRange = effectiveRange,
+            MaxRange = maxRange,
+            TimeToImpact = timeToImpact,
+            TerminalSpeed = terminalSpeed,
+            InNoEscapeZone = distance is { } v && v <= noEscape && v >= minRange,
+            SeekerLocked = seekerLocked,
+            LoadWithinLimit = loadOk,
+            HasEstimates = estimates,
+            AltitudeAdvantage = input.TargetAltitudeM is { } ta ? ownAltitude - ta : null,
         };
     }
 

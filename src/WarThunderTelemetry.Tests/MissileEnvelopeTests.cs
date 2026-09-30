@@ -8,12 +8,13 @@ namespace WarThunderTelemetry.Tests;
 /// <summary>
 /// 导弹参数库、发射包线计算与武器状态链路测试。
 /// <para>
-/// 重点覆盖三类容易出错的地方：
+/// 参数库已换为社区数据挖掘表（空空弹，含推力/燃烧/阻力系数等实测值），
+/// 包线计算默认走「质点飞行模型推演」路径。测试重点：
 /// <list type="number">
 /// <item><b>别名歧义</b>：<c>R-60M</c> 绝不能被 <c>R-60</c> 抢走；</item>
-/// <item><b>物理走势</b>：高空射程必须大于低空、迎头必须大于尾追、
-/// 过载超限必须否决发射 —— 这些方向性错误比数值误差更危险；</item>
-/// <item><b>数据缺失</b>：参数不全时必须照常给出结果并标记估算，而不是抛异常或给 0。</item>
+/// <item><b>物理走势</b>：高空射程大于低空、迎头大于尾追、
+/// 射程层级单调 —— 方向性错误比数值误差更危险；</item>
+/// <item><b>数据缺失</b>：参数不全时走估算路径并标记，不抛异常、不给 0。</item>
 /// </list>
 /// </para>
 /// </summary>
@@ -29,23 +30,29 @@ public class MissileEnvelopeTests
     {
         var profiles = MissileDatabase.Profiles;
 
-        Assert.True(profiles.Count >= 25, $"收录数量过少：{profiles.Count}");
+        Assert.True(profiles.Count >= 50, $"收录数量过少：{profiles.Count}");
 
         var ids = profiles.Select(p => p.Id).ToList();
         Assert.Equal(ids.Count, ids.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
     [Fact]
-    public void 参数库_每条都必须有正的最大射程与过载()
+    public void 参数库_实测弹必须有核心飞行参数()
     {
+        // 入库门槛：推力/燃烧/极速/最大距离/滞空/增速/阻力系数至少占三项。
         foreach (var profile in MissileDatabase.Profiles)
         {
-            Assert.True(profile.MaxRange is > 0, $"{profile.Id} 缺最大射程");
-            Assert.True(profile.MaxG is > 0, $"{profile.Id} 缺最大过载");
-            Assert.True(profile.BurnTime is > 0, $"{profile.Id} 缺燃烧时间");
-            Assert.True(profile.MaxSpeed is > 0, $"{profile.Id} 缺最大速度");
-            Assert.True(profile.LaunchGLimit is > 0, $"{profile.Id} 缺发射过载限制");
-            Assert.False(string.IsNullOrWhiteSpace(profile.DisplayNameZh), $"{profile.Id} 缺中文名");
+            var have = 0;
+            if (profile.ThrustN is > 0) have++;
+            if (profile.BurnTime is > 0) have++;
+            if (profile.MaxSpeed is > 0) have++;
+            if (profile.MaxDistanceM is > 0) have++;
+            if (profile.LifeTimeS is > 0) have++;
+            if (profile.BoostDv1Ms is > 0) have++;
+            if (profile.DragCxk is > 0) have++;
+
+            Assert.True(have >= 3,
+                $"{profile.Id} 核心参数不足（{have}/7），不该出现在库里");
         }
     }
 
@@ -54,25 +61,45 @@ public class MissileEnvelopeTests
     {
         foreach (var profile in MissileDatabase.Profiles)
         {
+            if (profile.MaxDistanceM is not { } range)
+            {
+                continue;
+            }
+
             // 最远不过 400 km（R-37M 量级），最近不小于 2 km。
-            Assert.InRange(profile.MaxRange!.Value, 2_000, 400_000);
+            Assert.InRange(range, 2_000, 400_000);
+        }
+    }
+
+    [Fact]
+    public void 参数库_实测弹的推重比应落在物理可信区间()
+    {
+        foreach (var profile in MissileDatabase.Profiles)
+        {
+            if (profile.ThrustN is not { } thrust || profile.MassKg is not { } mass || mass <= 0)
+            {
+                continue;
+            }
+
+            // 推重比（N/kg）：单兵弹初段可达 ~430（约 44 g），重弹最低约 30。
+            var ratio = thrust / mass;
+            Assert.InRange(ratio, 20, 500);
         }
     }
 
     // ================= 别名解析 =================
 
     [Theory]
-    [InlineData("R-60MK", "r60m")]
-    [InlineData("R-60M", "r60m")]
-    [InlineData("AIM-9L", "aim9l")]
-    [InlineData("AIM-9L Sidewinder", "aim9l")]
-    [InlineData("aim-9l", "aim9l")]
-    [InlineData("R-3R", "r3r")]
+    [InlineData("R-60MK", "r60mmk")]
+    [InlineData("R-60M", "r60mmk")]
+    [InlineData("AIM-9L", "aim9lrb74")]
+    [InlineData("AIM-9L Sidewinder", "aim9lrb74")]
+    [InlineData("aim-9l", "aim9lrb74")]
     [InlineData("R-3S", "r3s")]
     [InlineData("R-27ER", "r27er")]
-    [InlineData("AIM-7M Sparrow", "aim7m")]
-    [InlineData("R550 Magic 1", "magic1")]
-    [InlineData("PL-2", "pl2")]
+    [InlineData("AIM-7F Sparrow", "aim7f")]
+    [InlineData("R-77", "r77rvvae")]
+    [InlineData("AIM-9B", "aim9brb24")]
     public void 别名解析_应命中预期导弹(string input, string expectedId)
     {
         var hit = MissileDatabase.FindByAlias(input);
@@ -89,12 +116,22 @@ public class MissileEnvelopeTests
 
         Assert.NotNull(upgrade);
         Assert.NotNull(baseModel);
-        Assert.Equal("r60m", upgrade!.Id);
+        Assert.Equal("r60mmk", upgrade!.Id);
         Assert.Equal("r60", baseModel!.Id);
 
         // 两者确实不是同一枚弹，否则这个测试没有意义。
         Assert.NotEqual(upgrade.Id, baseModel.Id);
-        Assert.True(upgrade.MaxRange > baseModel.MaxRange);
+    }
+
+    [Fact]
+    public void 别名解析_源表未填参数的弹不应瞎猜()
+    {
+        // AIM-7M / PL-2 在数据源表里参数列是空的，按数据纪律不收录。
+        Assert.Null(MissileDatabase.FindByAlias("AIM-7M"));
+        Assert.Null(MissileDatabase.FindByAlias("PL-2"));
+
+        // Magic 550 系列不在空空弹表里。
+        Assert.Null(MissileDatabase.FindByAlias("R550 Magic 1"));
     }
 
     [Fact]
@@ -105,13 +142,13 @@ public class MissileEnvelopeTests
         Assert.Null(MissileDatabase.FindByAlias(null));
     }
 
-    // ================= 包线计算的物理走势 =================
+    // ================= 飞行模型推演的物理走势 =================
 
     private static MissileProfile Aim9L =>
-        MissileDatabase.Profiles.First(p => p.Id == "aim9l");
+        MissileDatabase.Profiles.First(p => p.Id == "aim9lrb74");
 
-    private static MissileProfile Aim7M =>
-        MissileDatabase.Profiles.First(p => p.Id == "aim7m");
+    private static MissileProfile Aim7F =>
+        MissileDatabase.Profiles.First(p => p.Id == "aim7f");
 
     [Fact]
     public void 高空射程应大于低空()
@@ -140,7 +177,7 @@ public class MissileEnvelopeTests
     [Fact]
     public void 迎头射程应大于尾追()
     {
-        var headOn = LaunchEnvelopeCalculator.Solve(Aim7M, new LaunchInput
+        var headOn = LaunchEnvelopeCalculator.Solve(Aim7F, new LaunchInput
         {
             OwnSpeedKmh = 1_000,
             OwnAltitudeM = 6_000,
@@ -148,7 +185,7 @@ public class MissileEnvelopeTests
             Aspect = EngagementAspect.HeadOn,
         });
 
-        var tailOn = LaunchEnvelopeCalculator.Solve(Aim7M, new LaunchInput
+        var tailOn = LaunchEnvelopeCalculator.Solve(Aim7F, new LaunchInput
         {
             OwnSpeedKmh = 1_000,
             OwnAltitudeM = 6_000,
@@ -156,8 +193,10 @@ public class MissileEnvelopeTests
             Aspect = EngagementAspect.TailOn,
         });
 
+        Assert.True(headOn.MaxRange > tailOn.MaxRange,
+            $"迎头 {headOn.MaxRange:F0} m 应大于尾追 {tailOn.MaxRange:F0} m");
         Assert.True(headOn.EffectiveRange > tailOn.EffectiveRange,
-            $"迎头 {headOn.EffectiveRange:F0} m 应大于尾追 {tailOn.EffectiveRange:F0} m");
+            $"迎头有效 {headOn.EffectiveRange:F0} m 应大于尾追有效 {tailOn.EffectiveRange:F0} m");
     }
 
     [Fact]
@@ -177,13 +216,14 @@ public class MissileEnvelopeTests
             Aspect = EngagementAspect.TailOn,
         });
 
-        Assert.True(fast.MaxRange > slow.MaxRange);
+        Assert.True(fast.MaxRange > slow.MaxRange,
+            $"快车 {fast.MaxRange:F0} m 应大于慢车 {slow.MaxRange:F0} m");
     }
 
     [Fact]
     public void 射程层级_最小小于不可逃逸小于有效小于最大()
     {
-        var solution = LaunchEnvelopeCalculator.Solve(Aim7M, new LaunchInput
+        var solution = LaunchEnvelopeCalculator.Solve(Aim7F, new LaunchInput
         {
             OwnSpeedKmh = 1_000,
             OwnAltitudeM = 6_000,
@@ -198,6 +238,18 @@ public class MissileEnvelopeTests
             $"不可逃逸 {solution.NoEscapeRange:F0} 应不大于有效 {solution.EffectiveRange:F0}");
         Assert.True(solution.EffectiveRange <= solution.MaxRange,
             $"有效 {solution.EffectiveRange:F0} 应不大于最大 {solution.MaxRange:F0}");
+    }
+
+    [Fact]
+    public void 飞行模型_锚定应使模拟距离贴近数据表()
+    {
+        // AIM-9L 数据表最大飞行距离 18 km；模型在基准条件下应复现这个量级。
+        Assert.True(MissileFlightModel.TryBuild(Aim9L, 3_000, 900, out var model));
+        Assert.NotNull(model);
+
+        var total = model!.TotalDistanceM;
+        var anchor = Aim9L.MaxDistanceM!.Value;
+        Assert.InRange(total, anchor * 0.7, anchor * 1.3);
     }
 
     // ================= 建议判定 =================
@@ -237,7 +289,7 @@ public class MissileEnvelopeTests
     [Fact]
     public void 低于最小射程应给出过近()
     {
-        var solution = LaunchEnvelopeCalculator.Solve(Aim7M, new LaunchInput
+        var solution = LaunchEnvelopeCalculator.Solve(Aim7F, new LaunchInput
         {
             OwnSpeedKmh = 900,
             OwnAltitudeM = 5_000,
@@ -251,10 +303,20 @@ public class MissileEnvelopeTests
     [Fact]
     public void 发射过载超限应否决发射()
     {
-        // R-3S 的发射过载限制只有 2 g。
-        var r3s = MissileDatabase.Profiles.First(p => p.Id == "r3s");
+        // 数据表不含发射过载限制，用最小档案显式给定，验证否决链路仍有效。
+        var limited = new MissileProfile
+        {
+            Id = "test_load_limit",
+            DisplayName = "Test Load Limit",
+            MaxRange = 8_000,
+            NoEscapeRange = 3_000,
+            BurnTime = 2,
+            MaxSpeed = 800,
+            MaxG = 20,
+            LaunchGLimit = 2,
+        };
 
-        var solution = LaunchEnvelopeCalculator.Solve(r3s, new LaunchInput
+        var solution = LaunchEnvelopeCalculator.Solve(limited, new LaunchInput
         {
             OwnSpeedKmh = 800,
             OwnAltitudeM = 3_000,
@@ -271,9 +333,19 @@ public class MissileEnvelopeTests
     [Fact]
     public void 过载在限制内不应否决()
     {
-        var r3s = MissileDatabase.Profiles.First(p => p.Id == "r3s");
+        var limited = new MissileProfile
+        {
+            Id = "test_load_limit",
+            DisplayName = "Test Load Limit",
+            MaxRange = 8_000,
+            NoEscapeRange = 3_000,
+            BurnTime = 2,
+            MaxSpeed = 800,
+            MaxG = 20,
+            LaunchGLimit = 2,
+        };
 
-        var solution = LaunchEnvelopeCalculator.Solve(r3s, new LaunchInput
+        var solution = LaunchEnvelopeCalculator.Solve(limited, new LaunchInput
         {
             OwnSpeedKmh = 800,
             OwnAltitudeM = 3_000,
@@ -321,7 +393,7 @@ public class MissileEnvelopeTests
         });
 
         Assert.True(headOn.EffectiveRange > tailOn.EffectiveRange,
-            "AIM-9L 迎头导引头锁定距离应显著优于尾追");
+            "AIM-9L 迎头（目标接近）的有效射程应优于尾追");
     }
 
     [Fact]
@@ -342,7 +414,7 @@ public class MissileEnvelopeTests
     [Fact]
     public void 缺参数导弹应标记估算而不是给零()
     {
-        // 只给名字的最小档案，其余全靠引擎估算。
+        // 只给名字的最小档案，其余全靠引擎估算（走旧估算路径）。
         var sparse = new MissileProfile
         {
             Id = "test_sparse",
@@ -443,7 +515,7 @@ public class MissileEnvelopeTests
 
         Assert.True(status.IsConnected);
         Assert.NotNull(status.Missile);
-        Assert.Equal("aim9l", status.Missile!.Id);
+        Assert.Equal("aim9lrb74", status.Missile!.Id);
         Assert.NotNull(status.Solution);
         Assert.False(string.IsNullOrWhiteSpace(status.Message));
 
@@ -472,27 +544,27 @@ public class MissileEnvelopeTests
         var service = new WeaponStatusService(Resolver);
 
         // 第一次识别成功。
-        var first = service.Build(SnapshotWith(weaponName: "AIM-7M", ias: 900, altitude: 6_000));
-        Assert.Equal("aim7m", first.Missile!.Id);
+        var first = service.Build(SnapshotWith(weaponName: "AIM-7F", ias: 900, altitude: 6_000));
+        Assert.Equal("aim7f", first.Missile!.Id);
 
         // 第二次接口没给武器名（游戏中切挂载的瞬间常出现）。
         var second = service.Build(SnapshotWith(ias: 900, altitude: 6_000));
 
         Assert.NotNull(second.Missile);
-        Assert.Equal("aim7m", second.Missile!.Id);
+        Assert.Equal("aim7f", second.Missile!.Id);
     }
 
     [Fact]
     public void 手动指定导弹应覆盖自动识别()
     {
         var service = new WeaponStatusService(Resolver);
-        var r60m = MissileDatabase.Profiles.First(p => p.Id == "r60m");
+        var r60m = MissileDatabase.Profiles.First(p => p.Id == "r60mmk");
 
         var status = service.Build(
             SnapshotWith(weaponName: "AIM-9L", ias: 900, altitude: 5_000),
             overrideMissile: r60m);
 
-        Assert.Equal("r60m", status.Missile!.Id);
+        Assert.Equal("r60mmk", status.Missile!.Id);
     }
 
     [Fact]
@@ -541,6 +613,6 @@ public class MissileEnvelopeTests
         var status = service.Build(snapshot);
 
         Assert.NotNull(status.Missile);
-        Assert.Equal("r60m", status.Missile!.Id);
+        Assert.Equal("r60mmk", status.Missile!.Id);
     }
 }

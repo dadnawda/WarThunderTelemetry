@@ -139,6 +139,82 @@ public sealed record MissileProfile
     /// <summary>数据来源标注（如 <c>wt-wiki</c> / <c>community</c>）。</summary>
     public string? Source { get; init; }
 
+    // ============================================================
+    //  数据挖掘实测参数（来源：社区整理的《WT导弹与设备性能表》，
+    //  为游戏内真实数值，非公开资料的粗略值）。
+    //  有这些字段时，包线计算走「能量模拟」而非粗略估算。
+    //  缺的字段仍然留 null，由引擎回退到估算路径。
+    // ============================================================
+
+    /// <summary>发射质量（kg）。</summary>
+    public double? MassKg { get; init; }
+
+    /// <summary>一级发动机燃尽后的空重（kg）。</summary>
+    public double? BurnoutMassKg { get; init; }
+
+    /// <summary>弹径（mm）。影响阻力。</summary>
+    public double? CaliberMm { get; init; }
+
+    /// <summary>弹长（m）。</summary>
+    public double? LengthM { get; init; }
+
+    /// <summary>一级发动机推力（N，海平面基准）。</summary>
+    public double? ThrustN { get; init; }
+
+    /// <summary>二级发动机推力（N）。双脉冲/冲压弹才有。</summary>
+    public double? Thrust2N { get; init; }
+
+    /// <summary>二级发动机工作时间（s）。</summary>
+    public double? Burn2TimeS { get; init; }
+
+    /// <summary>发射初速（m/s）。挂载弹射后的初始速度增量。</summary>
+    public double? StartSpeedMs { get; init; }
+
+    /// <summary>飞行阻力系数 CXk（游戏内挖出值）。</summary>
+    public double? DragCxk { get; init; }
+
+    /// <summary>滞空时间（s）。引信/自爆的总寿命。</summary>
+    public double? LifeTimeS { get; init; }
+
+    /// <summary>最大飞行距离（m）。数据表在最优条件下的实测值。</summary>
+    public double? MaxDistanceM { get; init; }
+
+    /// <summary>一级增速（m/s）。海平面基准下动力段结束时的速度增量。</summary>
+    public double? BoostDv1Ms { get; init; }
+
+    /// <summary>机动解锁延迟（s）。发射后不可转向的时间。</summary>
+    public double? ManeuverDelayS { get; init; }
+
+    /// <summary>导引头预热时间（s）。</summary>
+    public double? WarmupS { get; init; }
+
+    /// <summary>离轴锁定角（度）。</summary>
+    public double? OffBoresightDeg { get; init; }
+
+    /// <summary>全向导引头截获距离（m，对机身信号）。</summary>
+    public double? SeekerAllAspectM { get; init; }
+
+    /// <summary>尾追（发动机尾焰）导引头截获距离（m）。</summary>
+    public double? SeekerRearM { get; init; }
+
+    /// <summary>是否上抛弹道（Loft）。</summary>
+    public double? Loft { get; init; }
+
+    /// <summary>战斗部装药（kg）。</summary>
+    public double? ExplosiveMassKg { get; init; }
+
+    /// <summary>等效 TNT 当量（kg）。</summary>
+    public double? TntEquivalentKg { get; init; }
+
+    /// <summary>制导类型原文（如「主动雷达制导」），用于展示与核对。</summary>
+    public string? GuidanceText { get; init; }
+
+    /// <summary>
+    /// 全部可用名称（显示名 + 各参数分区的写法变体，已规范化小写），
+    /// 供挂载名反查。由数据库装载时生成。
+    /// </summary>
+    public IReadOnlySet<string> AllNames { get; init; } = new HashSet<string>();
+
     /// <summary>
     /// 按交战几何取导引头锁定距离。
     /// </summary>

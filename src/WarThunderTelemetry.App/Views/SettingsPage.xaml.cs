@@ -230,9 +230,14 @@ public sealed partial class SettingsPage : Page
 
             foreach (var missile in group)
             {
+                // 参数库已换为挖掘表，中文名多为 null，此时只显示原名。
+                var label = string.IsNullOrWhiteSpace(missile.DisplayNameZh)
+                    ? missile.DisplayName
+                    : $"{missile.DisplayNameZh}（{missile.DisplayName}）";
+
                 var item = new ComboBoxItem
                 {
-                    Content = $"{missile.DisplayNameZh}（{missile.DisplayName}）",
+                    Content = label,
                     Tag = missile.Id,
                 };
 
@@ -281,12 +286,40 @@ public sealed partial class SettingsPage : Page
         var missile = MissileDatabase.Profiles.FirstOrDefault(p =>
             string.Equals(p.Id, missileId, StringComparison.OrdinalIgnoreCase));
 
+        // 注意：换库后多数字段是 null（数据表没填就不编），
+        // 一律走空值安全的格式化，绝不能对 null 解引用 —— 那会直接崩设置页。
         WeaponMissileInfoText.Text = missile is null
             ? "未找到该导弹。"
-            : $"{missile.DisplayNameZh}：最大射程 {missile.MaxRange! / 1000:F1} km，" +
-              $"燃烧 {missile.BurnTime:F1} s，过载 {missile.MaxG:F0} g，" +
-              $"发射过载限制 {missile.LaunchGLimit:F1} g，制导方式 {GuidanceName(missile.Guidance)}。" +
-              (missile.Source is null ? string.Empty : $"（数据来源：{missile.Source}）");
+            : BuildMissileInfo(missile);
+    }
+
+    /// <summary>
+    /// 拼一段导弹关键信息。优先展示数据挖掘实测值，缺失的字段写「—」而不是编数字。
+    /// </summary>
+    private static string BuildMissileInfo(MissileProfile m)
+    {
+        static string Num(double? v, string format, string? unit) =>
+            v is { } value ? string.Concat(value.ToString(format), unit is null ? "" : " " + unit) : "—";
+
+        var name = string.IsNullOrWhiteSpace(m.DisplayNameZh) ? m.DisplayName : m.DisplayNameZh!;
+
+        // 最大飞行距离单位是米，展示换算成千米。
+        var rangeText = m.MaxDistanceM is { } range ? $"{range / 1000:F1} km" : "—";
+
+        var parts = new List<string>
+        {
+            $"最大飞行距离 {rangeText}",
+            $"燃烧 {Num(m.BurnTime, "F1", "s")}",
+            $"过载 {Num(m.MaxG, "F0", "g")}",
+            $"推力 {Num(m.ThrustN, "F0", "N")}",
+            $"质量 {Num(m.MassKg, "F1", "kg")}",
+            $"阻力系数 {Num(m.DragCxk, "F2", null)}",
+            $"滞空 {Num(m.LifeTimeS, "F0", "s")}",
+            $"制导 {GuidanceName(m.Guidance)}",
+        };
+
+        var text = $"{name}：" + string.Join("，", parts);
+        return m.Source is null ? text + "。" : $"{text}。（数据来源：{m.Source}）";
     }
 
     private static string GuidanceName(Core.Weapons.MissileGuidance guidance) => guidance switch
